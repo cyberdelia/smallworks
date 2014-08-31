@@ -1,26 +1,28 @@
 (ns smallworks.web
-  (:require [compojure.core :refer [defroutes GET PUT POST DELETE ANY]]
+  (:use [compojure.core :refer [defroutes GET PUT POST DELETE ANY]]
             [compojure.handler :refer [site]]
             [compojure.route :as route]
             [clojure.java.io :as io]
             [ring.adapter.jetty :as jetty]
-            [environ.core :refer [env]]))
+            [environ.core :refer [env]]
+            [aws.sdk.s3 :as s3]
+            [clojure.string :only (join)]))
 
-(defn splash []
-  {:status 200
-   :headers {"Content-Type" "text/plain"}
-   :body (pr-str ["Hello" :from 'Heroku])})
+(def credentials {:access-key (env :aws-access-key), :secret-key (env :aws-secret-key)})
+
+(defn uuid [] (str (java.util.UUID/randomUUID)))
+
+(defn upload [file]
+  (let [key (uuid) bucket (env :s3-bucket)]
+    (s3/put-object credentials bucket key file [:server-side-encryption "AES256"])
+    {:status 200
+     :body (generate-presigned-url credentials bucket key)}))
 
 (defroutes app
-  (GET "/" []
-       (splash))
-  (ANY "*" []
-       (route/not-found (slurp (io/resource "404.html")))))
+  (POST "/" {{{tempfile :tempfile filename :filename} :file} :params :as params}
+     (upload tempfile))
+  (route/not-found ""))
 
 (defn -main [& [port]]
   (let [port (Integer. (or port (env :port) 5000))]
     (jetty/run-jetty (site #'app) {:port port :join? false})))
-
-;; For interactive development:
-;; (.stop server)
-;; (def server (-main))
