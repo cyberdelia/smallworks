@@ -7,6 +7,7 @@
                  [compojure "1.1.8"]
                  [ring/ring-jetty-adapter "1.2.2"]
                  [environ "0.5.0"]
+                 [digest "1.4.4"]
                  [joda-time "2.4"]
                  [clj-aws-s3 "0.3.9" :exclusions [joda-time]]]
   :min-lein-version "2.0.0"

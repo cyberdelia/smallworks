@@ -6,15 +6,15 @@
             [ring.adapter.jetty :as jetty]
             [environ.core :refer [env]]
             [aws.sdk.s3 :as s3]
+            [digest :only (md5)]
             [clojure.string :only (join)]))
 
 (def credentials {:access-key (env :aws-access-key), :secret-key (env :aws-secret-key)})
 
-(defn uuid [] (str (java.util.UUID/randomUUID)))
-
 (defn upload [file]
-  (let [key (uuid) bucket (env :s3-bucket)]
-    (s3/put-object credentials bucket key file [:server-side-encryption "AES256"])
+  (let [key (md5 file) bucket (env :s3-bucket)]
+    (when-not (s3/object-exists? credentials bucket key)
+      (s3/put-object credentials bucket key file [:server-side-encryption "AES256"]))
     {:status 200
      :body (generate-presigned-url credentials bucket key)}))
 
